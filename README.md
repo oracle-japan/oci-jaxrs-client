@@ -19,5 +19,9 @@ Response response = builder.post(Entity.entity(new Message("こんにちは！")
 ```
 
 JaxRsClientHelper には自己署名証明書を突破する機能も備えています。
+  
+---
+*Copyright © 2019, Oracle and/or its affiliates. All rights reserved.*
+
 
 [request-signing]: https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm#Java
