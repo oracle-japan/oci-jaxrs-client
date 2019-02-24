@@ -1,0 +1,4 @@
+url=<target url>
+body={"text" : "Hi there!"}
+proxy=http://proxy.sample.com:80
+metroToken=<Tokyo Metro API Token>
