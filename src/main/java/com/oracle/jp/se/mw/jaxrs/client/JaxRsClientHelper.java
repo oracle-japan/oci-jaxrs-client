@@ -21,18 +21,18 @@ import org.glassfish.jersey.client.ClientProperties;
 public class JaxRsClientHelper {
 
     public static Client getClient() throws KeyManagementException, NoSuchAlgorithmException {
-    	return getClient(null);
+        return getClient(null);
     }
     public static Client getClient(String proxyUri) throws KeyManagementException, NoSuchAlgorithmException {
-    	return getLooseSslClient(false, proxyUri);
+        return getLooseSslClient(false, proxyUri);
     }
     public static Client getLooseSslClient() throws KeyManagementException, NoSuchAlgorithmException {
-    	return getLooseSslClient(null);
+        return getLooseSslClient(null);
     }
     public static Client getLooseSslClient(String proxyUri) throws KeyManagementException, NoSuchAlgorithmException {
-    	return getLooseSslClient(true, proxyUri);
+        return getLooseSslClient(true, proxyUri);
     }
-	
+    
     private static Client getLooseSslClient(boolean isLoose, String proxyUri) throws KeyManagementException, NoSuchAlgorithmException {
         ClientConfig config = new ClientConfig();
 
@@ -47,7 +47,7 @@ public class JaxRsClientHelper {
         ClientBuilder builder = ClientBuilder.newBuilder();
         builder.withConfig(config);
         if(isLoose) {
-        	builder.sslContext(getSSLContext()).hostnameVerifier(new TrustAllHostNameVerifier());
+            builder.sslContext(getSSLContext()).hostnameVerifier(new TrustAllHostNameVerifier());
         }
         return builder.build();
     }
