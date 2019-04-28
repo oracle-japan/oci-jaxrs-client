@@ -48,10 +48,6 @@ import com.google.common.hash.Hashing;
 //@Priority(Priorities.USER)
 public class OciJaxRsClientFilter implements ClientRequestFilter {
 	
-	static {
-		System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
-	}
-
 	private ObjectMapper mapper = new ObjectMapper();
 
 	private static final SimpleDateFormat DATE_FORMAT;
@@ -101,9 +97,10 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
 	}
 	
 	public void init(String config, String section) throws FileNotFoundException, IOException {
+		
 		String sec = Optional.ofNullable(section).orElse("DEFAULT");
-		//System.out.println("config: " + config);
-		//System.out.println("section: " + sec);
+		log("[init] config: " + config);
+		log("[init] section: " + sec);
 		
 		@SuppressWarnings("unused")
 		String user = null, tenancy = null, region = null, keyFile = null, fingerprint = null;
@@ -116,7 +113,7 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
 				String line = reader.readLine();
 				if(null == line) break;
 				Matcher m = pSec.matcher(line);
-				//System.out.println("matching: " + line);
+				log("matching: " + line);
 				if(m.matches()) {
 					inSection = m.group(1).equalsIgnoreCase(sec);
 				}
@@ -125,7 +122,7 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
 					if(-1 != pos) {
 						String key = line.substring(0, pos).trim();
 						String val = line.substring(pos +1).trim();
-						//System.out.println(String.format("key=%s, val=%s", key, val));
+						log(String.format("key=%s, val=%s", key, val));
 						if(key.equalsIgnoreCase("tenancy")) tenancy = val;
 						if(key.equalsIgnoreCase("user")) user = val;
 						if(key.equalsIgnoreCase("fingerprint")) fingerprint = val;
@@ -141,6 +138,10 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
 	}
 
 	public void init(String tenancy, String user, String fingerprint, String keyFile) {
+		log("[init] tenancy:" + tenancy);
+		log("[init] user:" + user);
+		log("[init] fingerprint:" + fingerprint);
+		log("[init] keyFile:" + keyFile);
 		
 		this.apiKey = (tenancy + "/" + user + "/" + fingerprint);
         this.privateKey = loadPrivateKey(keyFile);
@@ -154,7 +155,7 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
 
 
     private static PrivateKey loadPrivateKey(String privateKeyFilename) {
-    	//System.out.println("privateKeyFilename: " + privateKeyFilename);
+    	log("privateKeyFilename: " + privateKeyFilename);
         try (InputStream privateKeyStream = Files.newInputStream(Paths.get(privateKeyFilename))){
             return PEM.readPrivateKey(privateKeyStream);
         } catch (InvalidKeySpecException e) {
@@ -187,7 +188,8 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
 	}
 
 	public void signRequest(ClientRequestContext context) {
-
+		log("[signRequest]");
+		
     	final String method = context.getMethod().toLowerCase();
         // nothing to sign for options
         if (method.equals("options")) {
@@ -195,18 +197,23 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
         }
 
         final String path = extractPath(context.getUri());
-        //System.out.println("path: " + path);
+        log("path: " + path);
 
 		MultivaluedMap<String, Object> headers = context.getHeaders();
+        headers.remove("Transter-Encoding");
 
         // supply date if missing
         if (null == getHeaderValue(headers, "date")) {
-            headers.putSingle("date", DATE_FORMAT.format(new Date()));
+        	String date = DATE_FORMAT.format(new Date());
+            headers.putSingle("date", date);
+        	log("date header is missing - " + date);
         }
 
         // supply host if mossing
         if (null == getHeaderValue(headers, "host")) {
+        	String host = context.getUri().getHost();
         	headers.putSingle("host", context.getUri().getHost());
+        	log("host header is missing - " + host);
         }
 
         // supply content-type, content-length, and x-content-sha256 if missing (PUT and POST only)
@@ -217,7 +224,7 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
             if (null == getHeaderValue(headers, "content-length") || null == getHeaderValue(headers, "x-content-sha256")) {
                 byte[] body = null;
                 Object entity = context.getEntity();
-                //System.out.println("Entity class: " + entity.getClass().getName());
+                log("Entity class: " + entity.getClass().getName());
                 if(entity instanceof byte[]) {
                 	body = (byte[])entity;
                 }else if(entity instanceof String) {
@@ -226,10 +233,11 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
                 	body = getRequestBody((InputStream)entity);
                 }else {
                 	String subType = context.getMediaType().getSubtype();
-                    //System.out.println("Subtype: " + subType);
+                    log("Subtype: " + subType);
                 	if(subType.equalsIgnoreCase("json")) {
                 		try {
                 			body = mapper.writeValueAsBytes(entity);
+                			log("body: " + new String(body));
                 		}catch (JsonProcessingException e) {
                         	throw new OciJaxRsClientFilterException(e.getMessage(), e);
 						}
@@ -238,18 +246,14 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
                 	}
                 }
                 context.setEntity(body); //入れなおす
-            	//headers.putSingle("content-length", Integer.toString(body.length));
-                
-                if (null == getHeaderValue(headers, "content-length")) {
-                	headers.putSingle("content-length", Integer.toString(body.length));
-                }
-                if (null == getHeaderValue(headers, "x-content-sha256")) {
-                	headers.putSingle("x-content-sha256", calculateSHA256(body));
-                }
+    			log("body: " + new String(body));
+            	headers.putSingle("content-length", Integer.toString(body.length));
+            	headers.putSingle("x-content-sha256", calculateSHA256(body));
             }
         }
 
         final Map<String, String> sigheaders = extractHeadersToSign(context);
+        sigheaders.forEach((k,v) -> {log(String.format("(sign header) %s: %s", k, v));});
         final String signature = this.calculateSignature(method, path, sigheaders);
         headers.putSingle("Authorization", signature);
     	headers.remove("content-length");
@@ -353,5 +357,10 @@ public class OciJaxRsClientFilter implements ClientRequestFilter {
     		super(message, e);
     	}
     }
+    
+	public static void log(Object o) {
+		//System.out.println(o.toString());
+	}
+
 	
 }

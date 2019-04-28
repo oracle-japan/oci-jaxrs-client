@@ -2,3 +2,5 @@ url=<target url>
 body={"text" : "Hi there!"}
 proxy=http://proxy.sample.com:80
 metroToken=<Tokyo Metro API Token>
+streaming_host_url = https://streams.us-xxx-1.streaming.oci.oraclecloud.com
+stream_id = ocid1.stream.oc1.xxx.xxxxxxxxxxxxxxx

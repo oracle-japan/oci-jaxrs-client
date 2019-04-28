@@ -3,4 +3,7 @@
 .classpath
 .project
 
+
 client.properties
+*.zip
+
