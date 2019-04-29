@@ -1,5 +1,5 @@
 
-# JAX-RS client filter for Oracle Cloud Infrastructure API request sigining
+# JAX-RS client (ClientRequestFilter) for Oracle Cloud Infrastructure API request signing
 
 Oracle Cloud Infrastructure の [リクエストsigning][request-signing] に対応するための JAX-RS標準に準拠した ClientResponseFilterです。このFilterが送信時に自動的に必要な署名ヘッダを付加しますので、通常のJAX-RS Clientと同様のアプリケーションの書き方でAPIのリクエストができます。  
 Oracleが提供しているJavaサンプルコードを元に作成しました。  
