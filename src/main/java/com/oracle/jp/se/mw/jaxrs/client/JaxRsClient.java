@@ -42,23 +42,23 @@ public class JaxRsClient{
         ClientBuilder builder = ClientBuilder.newBuilder();
 
         try {
-        	ClientConfig config = new ClientConfig();
+            ClientConfig config = new ClientConfig();
 
             // enable proxy
             if(null != proxyUri && proxyUri.length() > 0){
-            	// It cannot coexist with chunk setting (probably...)
-            	//config.connectorProvider(new ApacheConnectorProvider());
-            	//config.property(ClientProperties.PROXY_URI, proxyUri);
-            	URL url = new URL(proxyUri);
-            	
-           		System.setProperty("http.proxyHost", url.getHost());
+                // It cannot coexist with chunk setting (probably...)
+                //config.connectorProvider(new ApacheConnectorProvider());
+                //config.property(ClientProperties.PROXY_URI, proxyUri);
+                URL url = new URL(proxyUri);
+                
+                   System.setProperty("http.proxyHost", url.getHost());
                 System.setProperty("http.proxyPort", new Integer(url.getPort()).toString());
-           		System.setProperty("https.proxyHost", url.getHost());
+                   System.setProperty("https.proxyHost", url.getHost());
                 System.setProperty("https.proxyPort", new Integer(url.getPort()).toString());
             }
 
-        	// avoid chunked transfer
-    		System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
+            // avoid chunked transfer
+            System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
             config.property(ClientProperties.CHUNKED_ENCODING_SIZE, Integer.MAX_VALUE);
 
             builder.withConfig(config);
@@ -69,9 +69,9 @@ public class JaxRsClient{
             }
             
             return builder.build();
-    	}catch(Exception e) {
-    		throw new RuntimeException("Cannot create client: " + e.getMessage(), e);
-    	}
+        }catch(Exception e) {
+            throw new RuntimeException("Cannot create client: " + e.getMessage(), e);
+        }
     }
 
     private static SSLContext getSSLContext() throws NoSuchAlgorithmException, KeyManagementException {
