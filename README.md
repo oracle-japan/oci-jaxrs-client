@@ -9,7 +9,7 @@ Oracleが提供しているJavaサンプルコードを元に作成しました�
 ※ OCI API Signature付のリクエストを送る例
 
 ```java
-Client ClientBuilder.newClient();
+Client client = ClientBuilder.newClient();
 client.register(OciJaxRsClientFilter.class); //"read [DEFAULT] of ~/.oci/config"
 WebTarget target = client.target("https://foo.bar.com/api/xxx");
 Builder builder = target.request();
