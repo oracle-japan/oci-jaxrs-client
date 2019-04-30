@@ -51,9 +51,9 @@ public class JaxRsClient{
                 //config.property(ClientProperties.PROXY_URI, proxyUri);
                 URL url = new URL(proxyUri);
                 
-                   System.setProperty("http.proxyHost", url.getHost());
+                System.setProperty("http.proxyHost", url.getHost());
                 System.setProperty("http.proxyPort", new Integer(url.getPort()).toString());
-                   System.setProperty("https.proxyHost", url.getHost());
+                System.setProperty("https.proxyHost", url.getHost());
                 System.setProperty("https.proxyPort", new Integer(url.getPort()).toString());
             }
 
@@ -69,6 +69,7 @@ public class JaxRsClient{
             }
             
             return builder.build();
+
         }catch(Exception e) {
             throw new RuntimeException("Cannot create client: " + e.getMessage(), e);
         }
