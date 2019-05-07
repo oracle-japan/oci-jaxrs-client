@@ -30,6 +30,7 @@
 
   <dependencies>
 
+    <!-- JAX-RS Jersey implementation -->
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-client</artifactId>
