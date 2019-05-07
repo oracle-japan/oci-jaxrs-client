@@ -4,7 +4,7 @@
 
   <groupId>com.oracle.jp.se.mw</groupId>
   <artifactId>jaxrs-client</artifactId>
-  <version>1.0.0-rc2</version>
+  <version>1.0.0-rc3</version>
   <packaging>jar</packaging>
 
   <name>jaxrs-client</name>
