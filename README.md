@@ -1,12 +1,12 @@
 
 # JAX-RS client (ClientRequestFilter) for Oracle Cloud Infrastructure API request signatures
 
-Oracle Cloud Infrastructure の [Request Signatures][request-signatures] （[日本語版][request-signatures-ja]）に対応するための JAX-RS標準に準拠した ClientResponseFilterです。このFilterが送信時に自動的に必要な署名ヘッダを付加しますので、通常のJAX-RS Clientと同様のアプリケーションの書き方でAPIのリクエストができます。  
+Oracle Cloud Infrastructure の [Request Signatures][request-signatures] （[日本語翻訳][request-signatures-ja]）に対応するための JAX-RS標準に準拠した ClientResponseFilterです。このFilterが送信時に自動的に必要な署名ヘッダを付加しますので、通常のJAX-RS Clientと同様のアプリケーションの書き方でAPIのリクエストができます。  
 Oracleが提供しているJavaサンプルコードを元に作成しました。  
 
 ## 事前準備
 
-プログラムの動作にあたって、[Oracle Cloue Infrastructure Command Line Interface][CLI]（[日本語版][CLI-ja]） (CLI)がインストールされているか、もしくはCLIの動作に必要な設定がなされいる必要があります。すなわち、${user.home}/.oci/config ファイルに以下の設定が正しくなされていることを確認して下さい。
+プログラムの動作にあたって、[Oracle Cloue Infrastructure Command Line Interface][CLI]（[日本語翻訳][CLI-ja]） (CLI)がインストールされているか、もしくはCLIの動作に必要な設定がなされている必要があります。すなわち、${user.home}/.oci/config ファイルに以下の設定が正しくなされていることを確認して下さい。
 
 ```config
 [DEFAULT]
@@ -61,7 +61,7 @@ Client client8 = JaxRsClient.getLooseClient("http://proxy.xxx.xxx:80");
 ## 注意点
 
 この実装はJerseyのJAX-RS Clientを前提に作られています。  
-フィルターの実装クラス(com.oracle.jp.se.mw.jaxrs.client.OciJaxRsClientFilter)自体は、特定のJAX-RS Clientの実装には依存しないようにしているので、他のJAX-RS Clientにも適用ができると思いますが、Jerseyを使用した場合に発生する不具合（デフォルトのままだとリクエスト・ヘッダのTransfer-Encoding: chunked になってしまい、Content-Length が消えてしまう）を回避するために、OciJaxRsClient クラスでJerseyに依存するconfig設定を行っています。  
+フィルターの実装クラス(com.oracle.jp.se.mw.jaxrs.client.OciJaxRsClientFilter)自体は、特定のJAX-RS Clientの実装には依存しないようにしているので、他のJAX-RS Clientにも適用ができると思います。Jerseyを使用した場合に発生する不具合（デフォルトのままだとリクエスト・ヘッダのTransfer-Encoding: chunked になってしまい、Content-Length ヘッダ が消えてしまう）を回避するために、OciJaxRsClient クラス内でJerseyに依存するconfig設定を行っています。  
 余談ですが、これの根本原因は、ベースとなっている[標準（ドラフト）][draft-cavage-http-signatures-08]が、Signatureの生成・検証にContent-Lengthヘッダの存在を前提にしているためです。Transfer-Encoding: chunked でもchunk sizeを数えれば実質同じことができると思うので、HTTP/1.1との相性も考慮して標準の方が歩み寄ってもいいのでは?
 
 ## その他
