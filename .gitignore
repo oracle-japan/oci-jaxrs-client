@@ -2,6 +2,10 @@
 .settings
 .classpath
 .project
+.vscode
+
+.gradle
+gradle.properties
 
 /temp
 client.properties

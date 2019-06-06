@@ -1,0 +1,311 @@
+
+ext {
+  if(properties['action'] || !hasProperty('action')) action = properties['action']
+  if(properties['gwName'] || !hasProperty('gwName')) gwName = properties['gwName']
+  if(properties['deployName'] || !hasProperty('deployName')) deployName = properties['deployName']
+  if(properties['pathPrefix'] || !hasProperty('pathPrefix')) pathPrefix = properties['pathPrefix']
+  if(properties['spec'] || !hasProperty('spec')) spec = properties['spec']
+
+  if(properties['apigw_type'] || !hasProperty('apigw_type')) apigw_type = properties['apigw_type']
+  if(!apigw_type) apigw_type = "PUBLIC"
+  if(!pathPrefix) pathPrefix = "/apigw"
+
+  // set these properties in gradle.properties
+  //proxy
+  //compartment_id
+  //apigw_subnet_id
+  //apigw_host_url
+  //function_id
+  //jcs_url
+
+  apiSpec = spec ? new File(spec).text :  """
+  {
+    "routes": [
+      {
+        "path": "/fn",
+        "methods": [
+            "GET", "POST"
+        ],
+        "backend": {
+            "type": "ORACLE_FUNCTIONS_BACKEND",
+            "functionId": "${function_id}"
+        }
+      },
+      {
+        "path": "/jcs",
+        "methods": [
+            "GET"
+        ],
+        "backend": {
+            "type": "HTTP_BACKEND",
+            "url": "${jcs_url}"
+        }
+      }
+    ]
+  }
+  """.toString()
+
+}
+
+buildscript {
+  repositories {
+    mavenLocal()
+    mavenCentral()
+  }
+
+  dependencies {
+    classpath 'com.oracle.jp.se.mw:jaxrs-client:1.0.0-rc3'
+  }
+}
+
+defaultTasks 'main'
+task main {
+    doLast{
+      main()
+    }
+}
+
+///// GO!!
+
+import com.oracle.jp.se.mw.jaxrs.client.OciJaxRsClient;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+def main(){
+  Client client = OciJaxRsClient.getClient(proxy);
+  if(action.equalsIgnoreCase("create")){
+    create(client)
+  }else if(action.equalsIgnoreCase("list")){
+    list(client, true)
+  }else if(action.equalsIgnoreCase("get")){
+    get(client, true)
+  }else if(action.equalsIgnoreCase("delete")){
+    delete(client)
+  }else if(action.equalsIgnoreCase("deploy")){
+    deploy(client)
+  }else if(action.equalsIgnoreCase("deployList")){
+    deployList(client, true)
+  }else if(action.equalsIgnoreCase("deployGet")){
+    deployGet(client, true)
+  }else if(action.equalsIgnoreCase("deployUpdate")){
+    deployUpdate(client)
+  }else if(action.equalsIgnoreCase("undeploy")){
+    undeploy(client)
+  }else{
+    print "Nothing to do..."
+  }
+  client.close();
+}
+
+def create(client){
+
+  def request = """
+  {
+    "displayName" : "${gwName}",
+    "endpointType" : "${apigw_type}",
+    "compartmentId" : "${compartment_id}",
+    "subnetId" : "${apigw_subnet_id}",
+    "freeformTags" : {},
+    "definedTags" : {}
+  }
+  """.toString()
+
+  println request
+
+  WebTarget target = client.target(apigw_host_url).path("/20190501/gateways");
+  println("Target URL: (POST) " + target.getUri());
+
+  Response response = target.request().post(Entity.json(request))
+  println("----------------------------------------");
+  int status = response.getStatus();
+  println(status + " " + response.getStatusInfo());
+  println(response.readEntity(String.class));
+}
+
+def list(client, bShowResp){
+  WebTarget target = client.target(apigw_host_url).path("/20190501/gateways")
+   	.queryParam("compartmentId", compartment_id)
+  println("Target URL: (GET) " + target.getUri())
+
+  Response response = target.request().get()
+  println("----------------------------------------")
+  int status = response.getStatus()
+  println(status + " " + response.getStatusInfo());
+  def responseText = response.readEntity(String.class)
+  if(bShowResp) println(responseText)
+  return new groovy.json.JsonSlurper().parseText(responseText)
+}
+
+def get(client, bShowItem){
+  def items = list(client, false).items
+  println "...Finding ${gwName}"
+  def item
+  def count = 0
+  items.each{
+    if(it.displayName.equals(gwName)){
+      if(bShowItem){
+        it.each{ println it }
+        println()
+      } 
+      if(!it.lifecycleState.equalsIgnoreCase("DELETED")){
+        item = it
+      }
+      count++
+    }
+  }
+  if(0 == count) print "(Not found)"
+  return item
+}
+
+def delete(client){
+  if(!gwName){
+    println "Please set -PgwName=<gateway name>"
+    return
+  }
+  //println "Gateway: ${gwName}"
+  def gwInfo = get(client, false)
+  if(!gwInfo) return;
+  println "Gateway Id: ${gwInfo.id}"
+  
+  //delete "/20190501/gateways/<gateway-ocid>
+  WebTarget target = client.target(apigw_host_url).path("/20190501/gateways/").path(gwInfo.id)
+  println("Target URL: (DELETE) " + target.getUri())
+
+  Response response = target.request().delete()
+  println("----------------------------------------")
+  int status = response.getStatus()
+  println(status + " " + response.getStatusInfo());
+  def responseText = response.readEntity(String.class)
+  println(responseText)
+}
+
+def deploy(client){
+  if(!gwName || !deployName || !pathPrefix){
+    println "Please set -PgwName=<gateway name> -PdeployName=<deployment name> -PpathPrefix=<path prefix>"
+    return
+  }
+  //println "Gateway: ${gwName}"
+  def gwInfo = get(client, false)
+  if(!gwInfo) return;
+  println "Gateway Id: ${gwInfo.id}"
+
+  def request = """
+  {
+    "displayName": "${deployName}",
+    "gatewayId": "${gwInfo.id}",
+    "compartmentId": "${compartment_id}",
+    "pathPrefix": "${pathPrefix}",
+    "specification": $apiSpec,
+    "freeformTags": {},
+    "definedTags": {}
+  }
+  """.toString()
+
+  println request
+
+  // post ./deployment.json "/20190501/deployments"
+  WebTarget target = client.target(apigw_host_url).path("/20190501/deployments");
+  println("Target URL: (POST) " + target.getUri());
+
+  Response response = target.request().post(Entity.json(request))
+  println("----------------------------------------");
+  int status = response.getStatus();
+  println(status + " " + response.getStatusInfo());
+  println(response.readEntity(String.class));
+}
+
+def deployList(client, bShowResp){
+  WebTarget target = client.target(apigw_host_url).path("/20190501/deployments")
+   	.queryParam("compartmentId", compartment_id)
+  println("Target URL: (GET) " + target.getUri())
+
+  Response response = target.request().get()
+  println("----------------------------------------")
+  int status = response.getStatus()
+  println(status + " " + response.getStatusInfo());
+  def responseText = response.readEntity(String.class)
+  if(bShowResp) println(responseText)
+  return new groovy.json.JsonSlurper().parseText(responseText)
+}
+
+def deployGet(client, bShowItem){
+  if(!gwName || !deployName){
+    println "Please set -PgwName=<gateway name> -PdeployName=<deployment name>"
+    return null;
+  }
+  def gwInfo = get(client, false)
+  if(!gwInfo) return;
+  def gatewayId = gwInfo.id
+  println "Gateway Id: ${gatewayId}"
+
+  def items = deployList(client, false).items
+  println "...Finding ${deployName}"
+  def item
+  def count = 0
+  items.each{
+    if(it.gatewayId.equals(gatewayId) && it.displayName.equals(deployName)){
+      if(bShowItem){
+        it.each{ println it }
+        println()
+      } 
+      if(!it.lifecycleState.equalsIgnoreCase("DELETED")){
+        item = it
+      }
+      count++
+    }
+  }
+  if(0 == count) print "(Not found)"
+  return item
+}
+
+def deployUpdate(client){
+  def deploymentInfo = deployGet(client, false)
+  if(!deploymentInfo) return;
+  println "Gateway Id: ${deploymentInfo.gatewayId}"
+  println "Deployment Id: ${deploymentInfo.id}"
+
+  def request = """
+  {
+    "displayName": "${deployName}",
+    "specification": $apiSpec,
+    "freeformTags": {},
+    "definedTags": {}
+  }
+  """.toString()
+
+  println request
+
+  // put "/20190501/deployments/<deployment-ocid>
+  WebTarget target = client.target(apigw_host_url).path("/20190501/deployments/").path(deploymentInfo.id);
+  println("Target URL: (PUT) " + target.getUri());
+
+  Response response = target.request().put(Entity.json(request))
+  println("----------------------------------------");
+  int status = response.getStatus();
+  println(status + " " + response.getStatusInfo());
+  println(response.readEntity(String.class));
+}
+
+def undeploy(client){
+
+  //println "Gateway: ${gwName}"
+  //println "Deployment: ${deployName}"
+  def deploymentInfo = deployGet(client, false)
+  if(!deploymentInfo) return;
+  println "Gateway Id: ${deploymentInfo.gatewayId}"
+  println "Deployment Id: ${deploymentInfo.id}"
+
+  // delete "/20190501/deployments/<deployment-ocid>"
+  WebTarget target = client.target(apigw_host_url).path("/20190501/deployments/").path(deploymentInfo.id);
+  println("Target URL: (DELETE) " + target.getUri());
+
+  Response response = target.request().delete()
+  println("----------------------------------------");
+  int status = response.getStatus();
+  println(status + " " + response.getStatusInfo());
+  println(response.readEntity(String.class));
+}
